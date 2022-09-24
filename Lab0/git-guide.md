@@ -69,7 +69,7 @@ checkout
 
 Pull Requests
 	-allows you to explain the changes you've made and then pushed to a repository on GitHub
-
+			  
 SSH Authentication
 	-Instead of having to sign in to use commit you can use an SSH key you've created and added to your account
 	-More secure since it's harder for someone to get your SSH key than it is your account

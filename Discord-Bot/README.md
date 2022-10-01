@@ -14,4 +14,4 @@ Usage
 Research
 - Some of the changes would be to run a script that activates the discord bot when you boot up the pc, this eliminates the need for Bob to even remember to run the bot everytime he turns on his computer since it would automatically start on boot
 - Another would be to put the bot on a seperate machine that would be on constantly since that would eliminate the off cycle of the bot entirely
-- Lastly would be to run it in the cloud for easy remote access and the same benefits as the seperate machine
+- Lastly would be to run it in the cloud for easy remote access and the same benefits as the seperate machine, with the downside being a fee so there's a higher cost to a cloud service bot.

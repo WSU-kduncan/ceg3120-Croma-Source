@@ -1,0 +1,7 @@
+VPC
+- A VPC allows a user to fully customize the network configuration such as custom route tables, internet gateways, subnets, and security groups, they're all wrapped up within the VPC
+- (Insert Screenshot here)
+
+Subnet
+- A subnet allows a larger network to section off ip addresses so that they can't communicate with each other but can communicate with other devices within the subnet
+

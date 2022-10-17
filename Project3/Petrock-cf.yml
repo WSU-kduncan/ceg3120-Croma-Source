@@ -1,0 +1,163 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: 'Testing area for AWS: This template builds a linux VM for CEG 2350 @ WSU.'
+Parameters:
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    Type: 'AWS::EC2::KeyPair::KeyName'
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+  SSHLocation:
+    Description: ' The IP address range that can be used to access the EC2 instance'
+    Type: String
+    MinLength: '9'
+    MaxLength: '18'
+    Default: 0.0.0.0/0
+    AllowedPattern: '(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})'
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+Mappings:
+  AWSInstanceType2Arch:
+    t2.micro:
+      Arch: HVM64
+  AWSRegionUbuntu:
+    us-east-1:
+      PV64: NOT_SUPPORTED
+      HVM64: ami-0b0ea68c435eb488d
+      HVMG2: NOT_SUPPORTED
+Resources:
+  VPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: 10.0.0.0/24
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackId'
+        - Key: Petrock-CF-VPC
+          Value: Petrock-CF-VPC
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 4fab3716-3ab0-4ec7-9e11-cd748ca9a2d2
+  Subnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.0.0/28
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackId'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 2fa7c878-ef33-4c5a-a2f7-b500d3adf81d
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackId'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: abe92e4d-593c-4ee5-9e12-35a81ba01050
+  AttachGateway:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: cc198b09-68b9-4f42-b8c6-9a3b06ffba51
+  RouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackId'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: c7d931c3-c99d-4c1e-98f5-77128c41ce84
+  Route:
+    Type: 'AWS::EC2::Route'
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 655157a1-923b-4e32-b4b7-a03067fdba6a
+  SubnetRouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref Subnet
+      RouteTableId: !Ref RouteTable
+  UbuntuIPAddress:
+    Type: 'AWS::EC2::EIP'
+    DependsOn: AttachGateway
+    Properties:
+      Domain: vpc
+      InstanceId: !Ref PublicUbuntuInstance
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: dd7506ae-86c4-482f-94cb-0f60965e7036
+  Lab1SecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      VpcId: !Ref VPC
+      GroupDescription: Enable SSH access via port 22 and open all insternal ports.
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 75.186.3.216/32
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 130.108.0.0/16
+        - IpProtocol: -1
+          FromPort: '-1'
+          ToPort: '-1'
+          CidrIp: 10.0.0.0/24
+        - IpProtocol: tcp
+          FromPort: '1'
+          ToPort: '65535'
+          CidrIp: 0.0.0.0/0
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 561a579f-fe25-47f4-9ea9-aaff2f825b62
+  PublicUbuntuInstance:
+    Type: 'AWS::EC2::Instance'
+    DependsOn: AttachGateway
+    Properties:
+      ImageId: !FindInMap 
+        - AWSRegionUbuntu
+        - !Ref 'AWS::Region'
+        - !FindInMap 
+          - AWSInstanceType2Arch
+          - t2.micro
+          - Arch
+      InstanceType: t2.micro
+      KeyName: !Ref KeyName
+      Tags:
+        - Key: Application
+          Value: !Ref 'AWS::StackId'
+        - Key: Name
+          Value: Petrock-CF-Instance
+      NetworkInterfaces:
+        - GroupSet:
+            - !Ref Lab1SecurityGroup
+          AssociatePublicIpAddress: 'true'
+          DeviceIndex: '0'
+          DeleteOnTermination: 'true'
+          SubnetId: !Ref Subnet
+          PrivateIpAddress: 10.0.0.12
+      UserData:
+        'Fn::Base64': !Sub |
+          #!/bin/bash -xe
+          hostnamectl set-hostname Petrock-CF-Instance
+          apt-get update && \
+          apt-get install -y \
+            git \
+            htop \
+            sl && \
+            apt-get install -y python3
+            apt-get install - ypython3-pip
+          echo "This is from the CF template" > /home/ubuntu/hello.txt && \
+          reboot
